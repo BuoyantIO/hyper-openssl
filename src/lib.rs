@@ -225,7 +225,16 @@ where
                 None => return Ok(MaybeHttpsStream::Http(conn)),
             };
 
-            let host = uri.host().ok_or("URI missing host")?;
+            let mut host = uri.host().ok_or("URI missing host")?;
+
+            // Remove square brackets around IPv6 address, as hyper-rustls does
+            // see https://github.com/BuoyantIO/enterprise-linkerd/issues/972
+            if let Some(trimmed) = host
+                .strip_prefix('[')
+                .and_then(|h| h.strip_suffix(']'))
+            {
+                host = trimmed;
+            }
 
             let config = inner.setup_ssl(&uri, host)?;
             let ssl = config.into_ssl(host)?;
