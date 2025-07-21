@@ -179,9 +179,15 @@ where
                 return Ok(MaybeHttpsStream::Http(conn));
             };
 
-            let Some(host) = uri.host() else {
+            let Some(mut host) = uri.host() else {
                 return Err("URI missing host".into());
             };
+
+            // Remove square brackets around IPv6 address, as hyper-rustls does
+            // see https://github.com/BuoyantIO/enterprise-linkerd/issues/972
+            if let Some(trimmed) = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')) {
+                host = trimmed;
+            }
 
             let mut config = inner.ssl.configure()?;
 
